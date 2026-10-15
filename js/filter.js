@@ -67,12 +67,15 @@
   (function tangle() {
     let d = 0;
     while (d < N) {
-      let x = rand(), y = rand(), ang = rand() * 2 * Math.PI;
+      let x = 0.1 + 0.8 * rand(), y = 0.1 + 0.8 * rand(), ang = rand() * 2 * Math.PI;
       const len = 12 + Math.floor(rand() * 30);
       for (let j = 0; j < len && d < N; j++, d++) {
         ang += (rand() - 0.5) * 1.3;
-        x = Math.min(0.98, Math.max(0.02, x + Math.cos(ang) * 0.022));
-        y = Math.min(0.98, Math.max(0.02, y + Math.sin(ang) * 0.034));
+        let nx = x + Math.cos(ang) * 0.022, ny = y + Math.sin(ang) * 0.034;
+        // bounce off the frame rather than stopping on it, so chains turn back inside
+        if (nx < 0.03 || nx > 0.97) { ang = Math.PI - ang; nx = x + Math.cos(ang) * 0.022; }
+        if (ny < 0.04 || ny > 0.96) { ang = -ang; ny = y + Math.sin(ang) * 0.034; }
+        x = Math.min(0.97, Math.max(0.03, nx)); y = Math.min(0.96, Math.max(0.04, ny));
         gx[d] = x; gy[d] = y;
       }
     }
