@@ -8,7 +8,7 @@
 <link rel="icon" href="assets/picota_icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <script>try{var t=localStorage.getItem('picota-theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
 </head>
@@ -93,6 +93,7 @@
           <div class="idea-bar"><i id="idea-bar"></i></div>
         </div>
       </div>
+      <p class="caption"><b>Figure 1.</b> A composite transposon in the genome and in the assembly graph. <span class="sw" style="--c:var(--is)"></span>insertion sequence (IS), <span class="sw" style="--c:var(--cargo)"></span>cargo, <span class="sw" style="--c:var(--host)"></span>host chromosome. Reads from the two IS copies are indistinguishable, so the assembler keeps one IS node, at twice the read depth, and IS + cargo close a cycle.</p>
     </div>
   </div>
 </section>
@@ -106,7 +107,8 @@
       <p>An element counts as recovered only when a single contig — or a single detected cycle — carries at least 95% of it in one alignment. Across 520 simulated elements:</p>
       <p class="muted">With two genomic IS copies and nothing repeating inside the element, SPAdes contigs recover 52–78%. One more copy of that IS takes them to 5–7.5%. The graph holds 95–100% in each case.</p>
     </div>
-    <div class="bars" id="route-bars"></div>
+    <div class="fig"><div class="bars" id="route-bars"></div>
+        <p class="caption"><b>Figure 2.</b> Elements recovered whole — at least 95% of the element in one alignment — by a single contig or by a single detected cycle; 520 simulated elements.</p></div>
   </div>
 </section>
 
@@ -158,6 +160,7 @@
       </div>
       <div class="cycle-info" id="cycle-info"></div>
     </div>
+    <p class="caption"><b>Figure 3.</b> Cycle detection on <code>testNitro.gfa</code>. <b>(a)</b> The assembly graph, one node per contig, sized by length; the DFS replay colours nodes on the stack and the back-edges that close cycles, and the selected cycle is drawn as its walk. <b>(b)</b> Circular map of the selected cycle: contigs in walk order on the outer ring, PICOTA's IS and cargo hits on the middle ring, Prodigal ORFs (+ strand outside, − strand inside) on the inner ring.</p>
 
     <div class="funnel" id="nitro-funnel"></div>
     <p class="fineprint">From back-edges to candidates: for each back-edge, all simple paths from its target back to its source (up to <code>path_limit</code> = 25 nodes) are enumerated, sequences are rebuilt from contig overlaps, cycles outside 1–40 kb are dropped, and near-duplicates are removed — first by strand-agnostic contig sets, then by k-mer Jaccard similarity.</p>
@@ -216,6 +219,7 @@
         <p class="fineprint">The 0.50 / 0.50 split is measured, not chosen: across the 1,272 benchmark candidates it gives the best F1, and its own optimal threshold lands on 50 — the value <code>threshold_final_score</code> ships with.</p>
       </div>
     </div>
+    <p class="caption"><b>Figure 4.</b> <code>score3</code> evaluated as you move the inputs, with the shipped constants: composite transposon length 5,850 ± 2,586 bp, maximum z of 20, novel-cargo floor 0.30, reporting threshold 50.</p>
   </div>
 </section>
 
@@ -226,6 +230,7 @@
     <h2>Six architectures, scored at a threshold of 50.</h2>
     <p class="section-lead">Composite transposons implanted into <em>E. coli</em> K-12 MG1655, so the answer is known by construction: ten genomes per architecture, four elements each. An element counts as recovered when one reported cycle covers ≥ 95% of it at ≥ 95% identity. Detection runs at about 17% precision; scoring takes that to <strong>91.2%</strong> while keeping <strong>98.5%</strong> of the elements.</p>
     <div class="scenarios" id="scenarios"></div>
+    <p class="caption"><b>Figure 5a.</b> Six simulated architectures, ten genomes and 40 elements each, scored at <code>score3</code> &gt; 50. Recovered: one reported cycle covers ≥ 95% of the element at ≥ 95% identity. False positives are reported cycles covering no implanted element.</p>
     <div class="callout">
       <b>Known limit.</b> When the flanking IS also occurs inside the cargo (<code>cargo_is_same</code>), only 2 of 40 elements are covered by any candidate cycle. The loss is in detection, not scoring, so no threshold recovers it.
     </div>
@@ -242,6 +247,7 @@
         <svg id="cn-chart" role="img" aria-label="Elements recovered against flanking-IS copy number for PICOTA and MobileElementFinder"></svg>
         <div class="chart-tip" id="cn-tip" hidden></div>
       </div>
+      <p class="caption"><b>Figure 5b.</b> The 40 baseline elements re-implanted at six flanking-IS copy numbers. PICOTA on the SPAdes graph against MobileElementFinder (MEF) on the complete chromosome and on contigs.</p>
       <p class="fineprint">PICOTA on the MEGAHIT graph counts candidate cycles covering an element before scoring (detection only). Hover a copy number for precision and prediction counts.</p>
     </div>
 
@@ -250,25 +256,10 @@
         <h3 class="bm-h">Nothing implanted, nothing reported.</h3>
         <p>Ten wild-type MG1655 genomes, simulated, assembled and searched exactly like the others. The graph closes 12–22 cycles per genome through the host's own repeats; none of the 180 clears <code>score3</code> &gt; 50.</p>
       </div>
-      <div class="bars" id="neg-bars"></div>
+      <div class="fig"><div class="bars" id="neg-bars"></div>
+        <p class="caption"><b>Figure 5c.</b> Ten wild-type MG1655 genomes with nothing implanted: candidate cycles or predictions per route.</p></div>
     </div>
 
-    <div class="bm-block">
-      <div class="table-head">
-        <div>
-          <h3 class="bm-h">The implanted elements</h3>
-          <p class="muted" id="el-count"></p>
-        </div>
-        <span class="preview-badge">Preview</span>
-      </div>
-      <div class="table-ctrl">
-        <div class="chips" id="el-groups"></div>
-        <input type="search" id="el-search" placeholder="Search the preview…" aria-label="Search elements">
-      </div>
-      <div class="table-wrap"><table class="el-table" id="el-table"><thead></thead><tbody></tbody></table></div>
-      <div class="pager" id="el-pager"></div>
-      <p class="fineprint" id="el-note"></p>
-    </div>
   </div>
 </section>
 

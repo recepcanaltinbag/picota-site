@@ -11,7 +11,6 @@
     scenarios(asObjects(d.architectures));
     copyNumber(asObjects(d.copy_number));
     negative(asObjects(d.negative_control));
-    elements(d.elements);
   }).catch(err => {
     document.getElementById('scenarios').textContent = 'Could not load the benchmark data (' + err.message + ').';
   });
@@ -158,76 +157,4 @@
     onView(host, () => host.querySelectorAll('.bar-fill').forEach(b => { b.style.width = b.dataset.w + '%'; }));
   }
 
-  /* ---------- element table ---------- */
-  function elements(t) {
-    const C = t.columns;
-    const idx = name => C.indexOf(name);
-    const rows = t.rows.map(r => ({
-      exp: r[idx('Experiment')], group: r[idx('Group')], genome: r[idx('Genome')], el: r[idx('Element')],
-      is: r[idx('Insertion sequence')], fam: r[idx('IS family')], isLen: r[idx('IS length (bp)')],
-      copies: r[idx('Genomic copies of the IS')], cargo: r[idx('Cargo genes')], ctype: r[idx('Cargo type')],
-      inner: r[idx('IS inside the cargo')], len: r[idx('Element length (bp)')],
-    }));
-    const cols = [
-      ['group', 'Group'], ['genome', 'Genome'], ['el', 'Element'], ['is', 'Flanking IS'], ['fam', 'Family'],
-      ['copies', 'IS copies', true], ['cargo', 'Cargo genes'], ['inner', 'IS in cargo'], ['len', 'Length (bp)', true],
-    ];
-    const groups = ['All', ...new Set(rows.map(r => r.group))];
-    let group = 'All', q = '', sortK = null, sortDir = 1, page = 0;
-    const PER = 12;
-
-    const gHost = document.getElementById('el-groups');
-    groups.forEach(gName => {
-      const b = document.createElement('button');
-      b.className = 'chip' + (gName === 'All' ? ' on' : '');
-      b.textContent = gName;
-      b.addEventListener('click', () => { group = gName; page = 0; gHost.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === b)); render(); });
-      gHost.appendChild(b);
-    });
-    document.getElementById('el-search').addEventListener('input', e => { q = e.target.value.trim().toLowerCase(); page = 0; render(); });
-
-    const thead = document.querySelector('#el-table thead'), tbody = document.querySelector('#el-table tbody');
-    thead.innerHTML = '<tr>' + cols.map(([k, n, num]) => `<th data-k="${k}" class="${num ? 'num' : ''}" tabindex="0" aria-sort="none">${n}</th>`).join('') + '</tr>';
-    thead.querySelectorAll('th').forEach(th => {
-      const go = () => {
-        const k = th.dataset.k;
-        sortDir = sortK === k ? -sortDir : 1; sortK = k;
-        thead.querySelectorAll('th').forEach(x => x.setAttribute('aria-sort', x === th ? (sortDir > 0 ? 'ascending' : 'descending') : 'none'));
-        render();
-      };
-      th.addEventListener('click', go);
-      th.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
-    });
-
-    const pager = document.getElementById('el-pager');
-    const lenMax = Math.max(...rows.map(r => r.len));
-
-    function render() {
-      let list = rows.filter(r => group === 'All' || r.group === group);
-      if (q) list = list.filter(r => [r.group, r.genome, r.el, r.is, r.fam, r.cargo, r.ctype, r.inner].join(' ').toLowerCase().includes(q));
-      if (sortK) list = list.slice().sort((a, b) => (a[sortK] > b[sortK] ? 1 : a[sortK] < b[sortK] ? -1 : 0) * sortDir);
-      const pages = Math.max(1, Math.ceil(list.length / PER));
-      page = Math.min(page, pages - 1);
-      document.getElementById('el-count').textContent = `${fmt(list.length)} shown · ${t.total} implanted in all`;
-      tbody.innerHTML = list.slice(page * PER, page * PER + PER).map(r => `<tr>
-        <td><span class="grp grp-${r.exp}">${esc(r.group)}</span></td>
-        <td class="mono">${esc(r.genome)}</td>
-        <td class="mono">${esc(r.el)}</td>
-        <td><span class="is-chip">${esc(r.is)}</span><small>${fmt(r.isLen)} bp</small></td>
-        <td>${esc(r.fam)}</td>
-        <td class="num">${r.copies}</td>
-        <td class="cargo-cell">${esc(r.cargo).split(';').join('<br>')}${r.ctype !== 'AMR' ? `<small>${esc(r.ctype)}</small>` : ''}</td>
-        <td>${r.inner === 'none' ? '<span class="muted">—</span>' : esc(r.inner)}</td>
-        <td class="num"><span class="len-bar" style="width:${(42 * r.len / lenMax).toFixed(1)}px"></span>${fmt(r.len)}</td>
-      </tr>`).join('') || `<tr><td colspan="${cols.length}" class="muted empty">No element matches “${esc(q)}”.</td></tr>`;
-      pager.innerHTML = pages <= 1 ? '' :
-        `<button class="btn btn-small btn-ghost" ${page === 0 ? 'disabled' : ''} data-p="${page - 1}">← Previous</button>
-         <span>Page ${page + 1} of ${pages}</span>
-         <button class="btn btn-small btn-ghost" ${page >= pages - 1 ? 'disabled' : ''} data-p="${page + 1}">Next →</button>`;
-      pager.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { page = +b.dataset.p; render(); }));
-    }
-    document.getElementById('el-note').textContent = `A preview: ${PER_GROUP_TEXT(t)} of the ${t.total} elements (240 across the six architectures, 240 in the copy-number experiment). The complete table, with chromosome coordinates, is in Supplementary Data 1 of the manuscript.`;
-    render();
-  }
-  const PER_GROUP_TEXT = t => `${t.rows.length / t.groups} per group, ${t.rows.length}`;
 })();

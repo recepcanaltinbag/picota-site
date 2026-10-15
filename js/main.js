@@ -159,7 +159,11 @@
       reads.style.opacity = smooth(clamp((prog - 0.3) / 0.08)) * (1 - smooth(clamp((prog - 0.5) / 0.08)));
     }
 
-    let prog = STOPS[0], anim = null, playing = false, touched = false;
+    // Plays on its own in a loop while on screen: line → reads → cycle, hold, unwind, again.
+    // A step click shows that step and the loop resumes after a pause; the button stops it for good.
+    const HOLD = [1600, 2200, 3000];
+    let prog = STOPS[0], anim = null, timer = null, playing = false, userPaused = false, visible = false;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     function tweenTo(target, dur, done) {
       cancelAnimationFrame(anim);
       const from = prog, t0 = performance.now();
@@ -170,28 +174,56 @@
         if (k < 1) anim = requestAnimationFrame(tick); else if (done) done();
       })(t0);
     }
-    function play() {
-      playing = true; playBtn.textContent = '❚❚ Pause';
-      const seq = () => {
-        const next = STOPS.find(s => s > prog + 1e-3);
-        if (!playing) return;
-        if (next === undefined) { playing = false; playBtn.textContent = '↻ Replay'; return; }
-        tweenTo(next, next === 1 ? 2200 : 1300, () => setTimeout(seq, 1100));
-      };
-      if (prog >= 1 - 1e-3) { prog = 0; render(prog); }
-      seq();
+    function loop() {
+      if (!playing) return;
+      const i = STOPS.findIndex(s => s > prog + 1e-3);
+      if (i === -1) {                                   // at the cycle: hold, fade, start again from the line
+        timer = setTimeout(() => {
+          if (!playing) return;
+          svg.style.opacity = 0;
+          timer = setTimeout(() => {
+            prog = STOPS[0]; render(prog); svg.style.opacity = 1;
+            if (playing) timer = setTimeout(loop, HOLD[0]);
+          }, 450);
+        }, HOLD[2]);
+        return;
+      }
+      tweenTo(STOPS[i], i === 2 ? 2200 : 1200, () => { timer = setTimeout(loop, i === 2 ? 0 : HOLD[i]); });
     }
-    function stop() { playing = false; cancelAnimationFrame(anim); playBtn.textContent = '▶ Play'; }
-    playBtn.addEventListener('click', () => { touched = true; playing ? stop() : play(); });
-    steps.forEach((s, i) => s.addEventListener('click', () => { touched = true; stop(); tweenTo(STOPS[i], 1200); }));
+    function play() {
+      if (playing || reduce) return;
+      playing = true; playBtn.textContent = '❚❚ Pause';
+      loop();
+    }
+    function stop() {
+      playing = false; cancelAnimationFrame(anim); clearTimeout(timer);
+      svg.style.opacity = 1;
+      playBtn.textContent = '▶ Play';
+    }
+    function maybeResume(delay) {
+      clearTimeout(timer);
+      timer = setTimeout(() => { if (visible && !userPaused) play(); }, delay);
+    }
+    playBtn.addEventListener('click', () => {
+      if (playing) { userPaused = true; stop(); } else { userPaused = false; play(); }
+    });
+    steps.forEach((s, i) => s.addEventListener('click', () => {
+      stop(); tweenTo(STOPS[i], 1000);
+      if (!userPaused) maybeResume(6000);
+    }));
     render(prog);
-    new IntersectionObserver((es, io) => es.forEach(e => { if (e.isIntersecting) { io.disconnect(); setTimeout(() => { if (!touched) play(); }, 400); } }), { threshold: 0.5 }).observe(svg);
+    if (reduce) { prog = 1; render(prog); }
+    new IntersectionObserver(es => es.forEach(e => {
+      visible = e.isIntersecting;
+      if (visible && !userPaused) maybeResume(300); else if (!visible) stop();
+    }), { threshold: 0.35 }).observe(svg);
   })();
 
   /* ---------- reveal on view ---------- */
   window.picotaOnView = onView;
   function onView(node, fn) {
-    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { fn(); io.disconnect(); } }), { threshold: 0.3 });
+    // Fire once any part is well inside the viewport; a ratio threshold never fires for blocks taller than the screen.
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { fn(); io.disconnect(); } }), { threshold: 0, rootMargin: '0px 0px -12% 0px' });
     io.observe(node);
   }
 

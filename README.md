@@ -9,7 +9,7 @@ Static HTML/CSS/JS with D3 from a CDN; there is no build step.
     python3 tools/export_nitro.py /path/to/picota /path/to/outdir
 
 `data/benchmark.json` holds what the site shows from Supplementary Data 1 (the simulated benchmark):
-the summary tables and a 24-element preview without coordinates. It is made with
+the summary tables only. It is made with
 
     python3 tools/export_benchmark.py Supplementary_Data_1_simulated_benchmark.xlsx data/benchmark.json
 
