@@ -63,29 +63,35 @@
   <p class="wrap fineprint">Simulated benchmark: 200 elements in 50 genomes, five of six architectures. See <a href="#benchmark">Benchmark</a> for the sixth.</p>
 </section>
 
-<!-- COLLAPSE STORY -->
-<section id="collapse" class="story">
-  <div class="story-sticky">
-    <div class="wrap story-grid">
-      <div class="story-steps">
-        <p class="eyebrow">01 · The idea</p>
-        <div class="step" data-step="0">
-          <h2>In the genome, the element is linear.</h2>
-          <p>An insertion sequence, the cargo it carries, and a second copy of the same insertion sequence, sitting in the host chromosome.</p>
-        </div>
-        <div class="step" data-step="1">
-          <h2>The reads cannot tell the two IS copies apart.</h2>
-          <p>Every read from one copy matches the other just as well. The assembler has no way to decide which copy a read came from, so it keeps one.</p>
-        </div>
-        <div class="step" data-step="2">
-          <h2>In the graph, it becomes a cycle.</h2>
-          <p>One IS node, entered from the chromosome and from the end of the cargo, left towards the cargo and back to the chromosome. IS + cargo close a loop, shorter than the element itself, with the IS node at twice the read depth.</p>
-        </div>
-        <div class="progress-dots"><i></i><i></i><i></i></div>
+<!-- THE IDEA -->
+<section id="collapse" class="section section-alt">
+  <div class="wrap">
+    <p class="eyebrow">01 · The idea</p>
+    <h2>How a composite transposon becomes a cycle</h2>
+    <div class="idea">
+      <div class="idea-steps" role="tablist">
+        <button class="idea-step on" data-step="0" role="tab">
+          <span class="idea-n">1</span>
+          <span><b>In the genome, the element is linear.</b>
+          <span class="idea-t">An insertion sequence, its cargo, and a second copy of the same insertion sequence, in the host chromosome.</span></span>
+        </button>
+        <button class="idea-step" data-step="1" role="tab">
+          <span class="idea-n">2</span>
+          <span><b>Reads cannot tell the two IS copies apart.</b>
+          <span class="idea-t">A read from one copy matches the other just as well, so the assembler keeps a single IS.</span></span>
+        </button>
+        <button class="idea-step" data-step="2" role="tab">
+          <span class="idea-n">3</span>
+          <span><b>In the graph, it becomes a cycle.</b>
+          <span class="idea-t">Leave the IS into the cargo, and the end of the cargo leads back into the same IS: a loop of IS + cargo, with the IS at twice the read depth.</span></span>
+        </button>
       </div>
-      <div class="story-visual">
-        <svg viewBox="0 0 760 360" id="collapse-svg" role="img" aria-label="Animation: a linear IS-cargo-IS element bends into a cycle as the two IS copies collapse onto one node"></svg>
-        <p class="hint">Scroll to collapse</p>
+      <div class="idea-visual">
+        <svg viewBox="0 0 760 330" id="collapse-svg" role="img" aria-label="Animation: a linear IS-cargo-IS element bends into a cycle as the two IS copies collapse onto one node"></svg>
+        <div class="idea-ctrl">
+          <button class="btn btn-small" id="idea-play">▶ Play</button>
+          <div class="idea-bar"><i id="idea-bar"></i></div>
+        </div>
       </div>
     </div>
   </div>
@@ -135,9 +141,22 @@
           <div><b id="c-rev">0</b><span>reverse back-edges</span></div>
         </div>
         <p class="dfs-status" id="dfs-status">Press <b>Run DFS</b> to replay the search, or pick a detected cycle below.</p>
-        <h3 class="side-h">Detected cycles</h3>
+        <h3 class="side-h">Detected cycles · ranked by score3</h3>
         <div id="cycle-list" class="cycle-list"></div>
       </aside>
+    </div>
+
+    <div class="cycle-detail" id="cycle-detail" hidden>
+      <div class="ring-box">
+        <svg id="ring-svg" viewBox="-200 -200 400 400" role="img" aria-label="Circular map of the selected cycle"></svg>
+        <div class="ring-legend">
+          <span><i style="background:var(--is)"></i>insertion sequence</span>
+          <span><i style="background:var(--xeno)"></i>xenobiotic</span>
+          <span><i style="background:var(--accent)"></i>resistance</span>
+          <span><i style="background:var(--done)"></i>other ORFs</span>
+        </div>
+      </div>
+      <div class="cycle-info" id="cycle-info"></div>
     </div>
 
     <div class="funnel" id="nitro-funnel"></div>

@@ -15,4 +15,12 @@ the summary tables and a 24-element preview without coordinates. It is made with
 
 The spreadsheet itself is not part of this repository.
 
+The cycle scores, gene hits and ORFs come from `picota scoring` on those cycles (run with
+`threshold_final_score: 0` so every cycle is scored), merged in with
+
+    python3 tools/export_scores.py data/nitro.json <scoring output> <Pico_Temp/Prodigal_Out/sample>
+
+That run used CARD protein homolog models, the ISfinder/TnCentral IS set and the known composite
+transposons; the xenobiotic set was the curated one only.
+
 Preview locally with `python3 -m http.server` from this folder.
