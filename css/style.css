@@ -431,3 +431,20 @@ p { font-size: 1.06rem; line-height: 1.65; }
 }
 
 .idea-visual svg { max-width: 860px; margin: 0 auto; }
+
+/* The idea fits one screen: steps beside the figure on wide screens, figure height capped by the viewport */
+#collapse.section { padding: 56px 0 64px; }
+#collapse h2 { margin-bottom: 0; }
+.idea { margin-top: 20px; }
+.idea .caption { grid-column: 1 / -1; margin-top: 0; }
+#collapse-svg { max-height: calc(100vh - 290px); min-height: 180px; }
+@media (min-width: 961px) {
+  .idea { grid-template-columns: minmax(250px, 300px) minmax(0, 1fr); align-items: stretch; }
+  .idea-steps { grid-template-columns: 1fr; align-content: start; }
+  .idea-visual { display: flex; flex-direction: column; justify-content: center; }
+  #collapse-svg { max-height: calc(100vh - 250px); }
+}
+@media (max-height: 820px) {
+  .idea-step:not(.on) .idea-t { display: none; }
+  .idea-step { padding: 10px 14px; }
+}
