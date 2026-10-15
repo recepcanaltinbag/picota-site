@@ -1,4 +1,5 @@
 import sys, json, re
+# usage: export_nitro.py picota_repo out_dir [graph.gfa] [name.json]
 repo = sys.argv[1]; out = sys.argv[2]
 sys.path.insert(0, repo + '/picota')
 import src.cycle_finderv2 as cf
@@ -12,7 +13,8 @@ orig_dfs = cf.GraphWork.dfs_iterative
 def d(self, G):
     r = orig_dfs(self, G); cap['gw'] = self; return r
 cf.GraphWork.dfs_iterative = d
-gfa = repo + '/picota/test_data/testNitro.gfa'
+gfa = sys.argv[3] if len(sys.argv) > 3 else repo + '/picota/test_data/testNitro.gfa'
+name = sys.argv[4] if len(sys.argv) > 4 else 'nitro.json'
 import io, contextlib
 buf = io.StringIO()
 with contextlib.redirect_stdout(buf):
@@ -31,7 +33,7 @@ cycles = [{'name': c.name, 'len': c.length, 'comp': c.component_number, 'path': 
 stats = {'segments': len(segs), 'links': len(links), 'back_edges': len(gw.cycles),
          'reverse_back_edges': len(gw.reverse_or_cycles), 'all_paths': len(gw.allPaths),
          'reverse_paths': len(gw.reverseallPaths), 'before_kmer': cap['before_kmer'], 'final': len(cycles)}
-json.dump({'segments': segs, 'links': links, 'cycles': cycles, 'stats': stats}, open(out + '/nitro.json', 'w'))
+json.dump({'segments': segs, 'links': links, 'cycles': cycles, 'stats': stats}, open(out + '/' + name, 'w'))
 print(json.dumps(stats)); [print(c['name'], c['len'], c['comp'], c['rev'], c['path']) for c in cycles]
 
 # Replay the DFS with the same neighbour order, recording events for the animation
@@ -52,6 +54,6 @@ for s in G.adj.copy():
             if n not in finished: stack.append((n, iter(G.adj[n])))
         except StopIteration:
             stack.pop(); discovered.remove(cur); finished.add(cur); ev.append(['f', cur])
-data = json.load(open(out + '/nitro.json')); data['dfs'] = ev
-json.dump(data, open(out + '/nitro.json', 'w'), separators=(',', ':'))
+data = json.load(open(out + '/' + name)); data['dfs'] = ev
+json.dump(data, open(out + '/' + name, 'w'), separators=(',', ':'))
 print('events', len(ev), sum(e[0]=='b' for e in ev), sum(e[0]=='r' for e in ev))

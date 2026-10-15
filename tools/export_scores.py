@@ -1,6 +1,6 @@
 """Add PICOTA's scoring of the testNitro cycles to data/nitro.json.
 
-Usage: export_scores.py nitro.json scoring_dir prodigal_dir
+Usage: export_scores.py nitro.json scoring_dir prodigal_dir [link_overlap]
   scoring_dir   output of `picota scoring` run with threshold_final_score: 0,
                 holding picota_final_tab and one annotated .gbk per scored cycle
   prodigal_dir  Pico_Temp/Prodigal_Out/<sample>, one .gbk of ORFs per cycle
@@ -11,7 +11,7 @@ from Bio import SeqIO
 nitro_path, score_dir, prod_dir = sys.argv[1:4]
 data = json.load(open(nitro_path))
 seg_len = {s['id']: s['len'] for s in data['segments']}
-OVERLAP = 59  # every link in testNitro.gfa is 59M
+OVERLAP = int(sys.argv[4]) if len(sys.argv) > 4 else 59  # testNitro.gfa links are all 59M
 
 def key(name):  # 'Cycle_reverseoriented_4-len7980-comp9-' -> '4'
     return name.split('-')[0].split('_')[-1]

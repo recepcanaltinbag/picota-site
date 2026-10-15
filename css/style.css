@@ -468,3 +468,40 @@ section[id].section { scroll-margin-top: -7px; }
 .about summary::before { content: "+"; font: 600 .9rem "JetBrains Mono", monospace; color: var(--accent); width: 12px; }
 .about[open] summary::before { content: "−"; }
 .about p { font-size: .9rem; margin: 8px 0 0; }
+
+/* dataset picker and demo labels */
+.ds-pick select { font: 500 .82rem Inter, sans-serif; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; max-width: 100%; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.truth { display: inline-block; font: 600 .62rem Inter, sans-serif; letter-spacing: .04em; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; margin-left: 6px; vertical-align: 2px; }
+.truth.planted { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good); }
+.truth.decoy { background: var(--bg-alt); color: var(--muted); }
+.ci-truth { font-size: .88rem; margin: 10px 0 0; padding: 8px 10px; border-left: 3px solid var(--line); background: var(--bg-alt); }
+.ci-truth.planted { border-left-color: var(--good); }
+/* first screen: less air above the hero */
+.hero { padding: 40px 0 36px; }
+.stats { margin-top: 36px; }
+
+/* elimination figure */
+.elim { display: grid; grid-template-columns: minmax(230px, 290px) minmax(0, 1fr); gap: 18px; margin-top: 20px; }
+.elim-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; align-content: start; }
+.elim-step { width: 100%; display: flex; gap: 10px; align-items: center; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 9px 12px; cursor: pointer; color: var(--ink); font: inherit; }
+.elim-step b { display: block; font-size: .86rem; line-height: 1.25; }
+.elim-step small { font: 500 .74rem "JetBrains Mono", monospace; color: var(--muted); }
+.elim-step small em { font-style: normal; color: var(--accent); margin-left: 4px; }
+.elim-step.on { border-color: var(--ink); }
+.elim-step.on .idea-n { background: var(--ink); color: var(--bg); }
+.elim-visual { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px 12px; display: flex; flex-direction: column; min-width: 0; }
+.elim-head { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; min-height: 52px; }
+.elim-count b { font: 600 2rem var(--serif); letter-spacing: -.01em; margin-right: 8px; font-variant-numeric: tabular-nums; }
+.elim-count span { font-size: .84rem; color: var(--muted); }
+.elim-why { font-size: .88rem; color: var(--ink-2); flex: 1; min-width: 200px; }
+.elim-why b { color: var(--accent); }
+#elim-canvas { width: 100%; height: clamp(240px, calc(100vh - 380px), 420px); display: block; transition: opacity .4s; }
+@media (max-width: 960px) {
+  .elim { grid-template-columns: minmax(0, 1fr); }
+  .elim-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .elim-step { padding: 7px 8px; gap: 6px; }
+  .elim-step .idea-n { display: none; }
+  .elim-step b { font-size: .74rem; }
+  #elim-canvas { height: 280px; }
+}

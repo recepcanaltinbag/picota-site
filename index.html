@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=202610160048">
+<link rel="stylesheet" href="css/style.css?v=202610160055">
 <script>try{var t=localStorage.getItem('picota-theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
 </head>
 <body>
@@ -20,6 +20,7 @@
     <nav class="nav-links">
       <a href="#collapse">Idea</a>
       <a href="#explore">Explore</a>
+      <a href="#filter">Filtering</a>
       <a href="#scoring">Scoring</a>
       <a href="#benchmark">Benchmark</a>
       <a href="#start">Get started</a>
@@ -116,15 +117,21 @@
 <section id="explore" class="section section-alt">
   <div class="wrap">
     <p class="eyebrow">03 · Cycle detection, live</p>
-    <h2>Run PICOTA's DFS on <code>testNitro.gfa</code></h2>
+    <h2>Run PICOTA's DFS on an assembly graph</h2>
 
     <div class="explorer">
       <div class="graph-panel">
         <div class="graph-toolbar">
+          <label class="ds-pick"><span class="sr">Graph</span>
+            <select id="dataset" aria-label="Choose a graph" autocomplete="off">
+              <option value="demo">Demo graph · two composite transposons</option>
+              <option value="nitro">Real data · testNitro.gfa</option>
+            </select>
+          </label>
           <button class="btn btn-small" id="dfs-play">▶ Run DFS</button>
           <button class="btn btn-small btn-ghost" id="dfs-step">Step</button>
           <button class="btn btn-small btn-ghost" id="dfs-reset">Reset</button>
-          <label class="speed">Speed <input type="range" id="dfs-speed" min="1" max="60" value="18"></label>
+          <label class="speed">Speed <input type="range" id="dfs-speed" min="1" max="60" value="18" autocomplete="off"></label>
         </div>
         <svg id="graph-svg" role="img" aria-label="Assembly graph of testNitro.gfa"></svg>
         <div class="graph-legend">
@@ -137,7 +144,7 @@
       </div>
       <aside class="side-panel">
         <div class="counters">
-          <div><b id="c-visited">0</b><span>nodes visited / 544</span></div>
+          <div><b id="c-visited">0</b><span>nodes visited / <i id="c-total">0</i></span></div>
           <div><b id="c-back">0</b><span>back-edges</span></div>
           <div><b id="c-rev">0</b><span>reverse back-edges</span></div>
         </div>
@@ -146,8 +153,8 @@
         <div id="cycle-list" class="cycle-list"></div>
         <details class="about">
           <summary>How does the search work?</summary>
-          <p>The <em>P. nitroreducens</em> assembly graph bundled with the repository: 272 contigs and 311 links. Each contig is two nodes, one per strand. A depth-first search walks them; an edge back to a node still on the stack — or to its reverse complement — closes a cycle.</p>
-          <p>The replay is the actual event order of PICOTA's <code>dfs_iterative</code>, and the five cycles and their scores are PICOTA's actual output on this file.</p>
+          <p>Each contig is two nodes, one per strand. A depth-first search walks them; an edge back to a node still on the stack — or to its reverse complement — closes a cycle. The replay is the actual event order of PICOTA's <code>dfs_iterative</code>, and the cycles and scores are PICOTA's actual output on the graph.</p>
+          <p id="about-data"></p>
         </details>
       </aside>
     </div>
@@ -164,17 +171,40 @@
       </div>
       <div class="cycle-info" id="cycle-info"></div>
     </div>
-    <p class="caption"><b>Figure 3.</b> Cycle detection on <code>testNitro.gfa</code>. <b>(a)</b> The assembly graph, one node per contig, sized by length; the DFS replay colours nodes on the stack and the back-edges that close cycles, and the selected cycle is drawn as its walk. <b>(b)</b> Circular map of the selected cycle: contigs in walk order on the outer ring, PICOTA's IS and cargo hits on the middle ring, Prodigal ORFs (+ strand outside, − strand inside) on the inner ring.</p>
+    <p class="caption"><b>Figure 3.</b> Cycle detection on an assembly graph. <b>(a)</b> The assembly graph — the hand-drawn demo or the bundled <em>P. nitroreducens</em> graph — one node per contig, sized by length; the DFS replay colours nodes on the stack and the back-edges that close cycles, and the selected cycle is drawn as its walk. <b>(b)</b> Circular map of the selected cycle: contigs in walk order on the outer ring, PICOTA's IS and cargo hits on the middle ring, Prodigal ORFs (+ strand outside, − strand inside) on the inner ring.</p>
 
     <div class="funnel" id="nitro-funnel"></div>
     <p class="fineprint">From back-edges to candidates: for each back-edge, all simple paths from its target back to its source (up to <code>path_limit</code> = 25 nodes) are enumerated, sequences are rebuilt from contig overlaps, cycles outside 1–40 kb are dropped, and near-duplicates are removed — first by strand-agnostic contig sets, then by k-mer Jaccard similarity.</p>
   </div>
 </section>
 
+<!-- ELIMINATION -->
+<section id="filter" class="section">
+  <div class="wrap">
+    <p class="eyebrow">04 · From paths to elements</p>
+    <h2>A thousand candidate paths, eight elements.</h2>
+    <div class="elim">
+      <ol class="elim-steps" id="elim-steps"></ol>
+      <div class="elim-visual">
+        <div class="elim-head">
+          <div class="elim-count"><b id="elim-n">1,023</b><span id="elim-unit">candidate paths</span></div>
+          <div class="elim-why" id="elim-why"></div>
+        </div>
+        <canvas id="elim-canvas" role="img" aria-label="Animation: candidate paths eliminated stage by stage until the reported cycles remain"></canvas>
+        <div class="idea-ctrl">
+          <button class="btn btn-small" id="elim-play">❚❚ Pause</button>
+          <div class="idea-bar"><i id="elim-bar"></i></div>
+        </div>
+      </div>
+    </div>
+    <p class="caption"><b>Figure 4.</b> Candidate cycles at each stage of one PICOTA run, from the paths its depth-first search enumerates to the cycles it reports. Each dot is one candidate; <span class="sw" style="--c:var(--good)"></span>complete elements among the survivors (8 of 8), <span class="sw" style="--c:var(--accent)"></span>other candidates still in.</p>
+  </div>
+</section>
+
 <!-- SCORING -->
 <section id="scoring" class="section">
   <div class="wrap">
-    <p class="eyebrow">04 · Scoring</p>
+    <p class="eyebrow">05 · Scoring</p>
     <h2>Most cycles are the host's own repeats. The score separates them.</h2>
     <p class="section-lead">Detection casts wide on purpose — about 23 candidate cycles per genome to find 4 elements. <code>score3</code> is bounded 0–100: two gates that can zero it outright, and two equally weighted terms.</p>
 
@@ -223,18 +253,18 @@
         <p class="fineprint">The 0.50 / 0.50 split is measured, not chosen: across the 1,272 benchmark candidates it gives the best F1, and its own optimal threshold lands on 50 — the value <code>threshold_final_score</code> ships with.</p>
       </div>
     </div>
-    <p class="caption"><b>Figure 4.</b> <code>score3</code> evaluated as you move the inputs, with the shipped constants: composite transposon length 5,850 ± 2,586 bp, maximum z of 20, novel-cargo floor 0.30, reporting threshold 50.</p>
+    <p class="caption"><b>Figure 5.</b> <code>score3</code> evaluated as you move the inputs, with the shipped constants: composite transposon length 5,850 ± 2,586 bp, maximum z of 20, novel-cargo floor 0.30, reporting threshold 50.</p>
   </div>
 </section>
 
 <!-- BENCHMARK -->
 <section id="benchmark" class="section section-alt">
   <div class="wrap">
-    <p class="eyebrow">05 · Benchmark</p>
+    <p class="eyebrow">06 · Benchmark</p>
     <h2>Six architectures, scored at a threshold of 50.</h2>
     <p class="section-lead">Composite transposons implanted into <em>E. coli</em> K-12 MG1655, so the answer is known by construction: ten genomes per architecture, four elements each. An element counts as recovered when one reported cycle covers ≥ 95% of it at ≥ 95% identity. Detection runs at about 17% precision; scoring takes that to <strong>91.2%</strong> while keeping <strong>98.5%</strong> of the elements.</p>
     <div class="scenarios" id="scenarios"></div>
-    <p class="caption"><b>Figure 5a.</b> Six simulated architectures, ten genomes and 40 elements each, scored at <code>score3</code> &gt; 50. Recovered: one reported cycle covers ≥ 95% of the element at ≥ 95% identity. False positives are reported cycles covering no implanted element.</p>
+    <p class="caption"><b>Figure 6a.</b> Six simulated architectures, ten genomes and 40 elements each, scored at <code>score3</code> &gt; 50. Recovered: one reported cycle covers ≥ 95% of the element at ≥ 95% identity. False positives are reported cycles covering no implanted element.</p>
     <div class="callout">
       <b>Known limit.</b> When the flanking IS also occurs inside the cargo (<code>cargo_is_same</code>), only 2 of 40 elements are covered by any candidate cycle. The loss is in detection, not scoring, so no threshold recovers it.
     </div>
@@ -251,7 +281,7 @@
         <svg id="cn-chart" role="img" aria-label="Elements recovered against flanking-IS copy number for PICOTA and MobileElementFinder"></svg>
         <div class="chart-tip" id="cn-tip" hidden></div>
       </div>
-      <p class="caption"><b>Figure 5b.</b> The 40 baseline elements re-implanted at six flanking-IS copy numbers. PICOTA on the SPAdes graph against MobileElementFinder (MEF) on the complete chromosome and on contigs.</p>
+      <p class="caption"><b>Figure 6b.</b> The 40 baseline elements re-implanted at six flanking-IS copy numbers. PICOTA on the SPAdes graph against MobileElementFinder (MEF) on the complete chromosome and on contigs.</p>
       <p class="fineprint">PICOTA on the MEGAHIT graph counts candidate cycles covering an element before scoring (detection only). Hover a copy number for precision and prediction counts.</p>
     </div>
 
@@ -261,7 +291,7 @@
         <p>Ten wild-type MG1655 genomes, simulated, assembled and searched exactly like the others. The graph closes 12–22 cycles per genome through the host's own repeats; none of the 180 clears <code>score3</code> &gt; 50.</p>
       </div>
       <div class="fig"><div class="bars" id="neg-bars"></div>
-        <p class="caption"><b>Figure 5c.</b> Ten wild-type MG1655 genomes with nothing implanted: candidate cycles or predictions per route.</p></div>
+        <p class="caption"><b>Figure 6c.</b> Ten wild-type MG1655 genomes with nothing implanted: candidate cycles or predictions per route.</p></div>
     </div>
 
   </div>
@@ -270,7 +300,7 @@
 <!-- PIPELINE -->
 <section id="pipeline" class="section">
   <div class="wrap">
-    <p class="eyebrow">06 · Pipeline</p>
+    <p class="eyebrow">07 · Pipeline</p>
     <h2>From an SRA accession to annotated elements.</h2>
     <p class="section-lead">Every stage is a subcommand. Stages 3–7 run alone on a GFA you already have.</p>
     <ol class="pipeline" id="pipeline-list"></ol>
@@ -281,7 +311,7 @@
 <section id="start" class="section section-alt">
   <div class="wrap two-col">
     <div>
-      <p class="eyebrow">07 · Get started</p>
+      <p class="eyebrow">08 · Get started</p>
       <h2>Run it on the bundled graph in one command.</h2>
       <p>No download, no assembly: detection, scoring and annotation over <code>testNitro.gfa</code> with the shipped settings. Linux, Python ≥ 3.8, BLAST+ and Prodigal.</p>
       <p class="muted">Reference databases (CARD, ISfinder/TnCentral, KEGG xenobiotics, known composite transposons) are not in the git repository; the prepared set is available from the authors on request.</p>
@@ -320,7 +350,8 @@ pip install -r requirements.txt</code></pre></div>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="js/main.js?v=202610160048"></script>
-<script src="js/benchmark.js?v=202610160048"></script>
+<script src="js/main.js?v=202610160055"></script>
+<script src="js/filter.js?v=202610160055"></script>
+<script src="js/benchmark.js?v=202610160055"></script>
 </body>
 </html>

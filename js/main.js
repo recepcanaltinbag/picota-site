@@ -245,20 +245,20 @@
     onView(host, () => host.querySelectorAll('.bar-fill').forEach(b => { b.style.width = b.dataset.w + '%'; }));
   })();
 
-  /* ---------- funnel ---------- */
-  (function funnel() {
+  /* ---------- funnel, from the dataset's detection counts ---------- */
+  function renderFunnel(stats, nSeg) {
     const st = [
-      [544, 'oriented nodes — 272 contigs × 2 strands'],
-      [17, 'back-edges: 13 direct + 4 reverse-complement'],
-      [40, 'paths enumerated between their ends'],
-      [9, 'distinct cycles of 1–40 kb'],
-      [5, 'candidate cycles after k-mer deduplication'],
+      [2 * nSeg, `oriented nodes — ${nSeg} contigs × 2 strands`],
+      [stats.back_edges + stats.reverse_back_edges, `back-edges: ${stats.back_edges} direct + ${stats.reverse_back_edges} reverse-complement`],
+      [stats.all_paths + stats.reverse_paths, 'paths enumerated between their ends'],
+      [stats.before_kmer, 'distinct cycles of 1–40 kb'],
+      [stats.final, 'candidate cycles after k-mer deduplication'],
     ];
     const host = document.getElementById('nitro-funnel');
-    const max = Math.log10(544);
+    const max = Math.log10(2 * nSeg + 1);
     host.innerHTML = st.map(([v, l]) => `<div class="fstage"><div class="fbar" style="width:0" data-w="${Math.max(6, 100 * Math.log10(v + 1) / max)}"></div><b>${fmt(v)}</b><span>${l}</span></div>`).join('');
     onView(host, () => host.querySelectorAll('.fbar').forEach(b => { b.style.width = b.dataset.w + '%'; }));
-  })();
+  }
 
   /* ---------- score calculator ---------- */
   const calc = (function scoring() {
@@ -365,21 +365,49 @@
   }));
 
   /* ---------- graph explorer ---------- */
-  fetch('data/nitro.json').then(r => r.json()).then(initExplorer).catch(err => {
-    document.getElementById('dfs-status').textContent = 'Could not load the graph data (' + err.message + '). Serve the site over HTTP rather than opening the file directly.';
-  });
+  const DATASETS = {
+    demo: { url: 'data/demo.json', about: 'Demo graph: drawn by hand from real IS and CARD sequences — not an assembly — with two composite transposons and three look-alikes. The chromosome itself closes a ~60 kb cycle that detection drops at the 40 kb limit, and a SNP bubble is two parallel paths, not a cycle. <a href="data/demo.gfa" download>Download demo.gfa</a>.' },
+    nitro: { url: 'data/nitro.json', about: 'Real data: the <em>P. nitroreducens</em> assembly graph bundled with the repository, 272 contigs and 311 links.' },
+  };
+  const cache = {};
+  function loadDataset(name) {
+    const ds = DATASETS[name];
+    document.getElementById('about-data').innerHTML = ds.about;
+    (cache[name] ? Promise.resolve(cache[name]) : fetch(ds.url).then(r => r.json()).then(d => (cache[name] = d)))
+      .then(initExplorer)
+      .catch(err => {
+        document.getElementById('dfs-status').textContent = 'Could not load the graph data (' + err.message + '). Serve the site over HTTP rather than opening the file directly.';
+      });
+  }
+  // a reload starts clean: browsers restore form controls, so put them back to their defaults
+  document.getElementById('dataset').value = 'demo';
+  document.getElementById('dfs-speed').value = 18;
+  document.getElementById('dataset').addEventListener('change', e => loadDataset(e.target.value));
+  loadDataset('demo');
 
+  let teardown = null;
   function initExplorer(data) {
+    if (teardown) teardown();
+    // fresh controls each time, so listeners from the previous graph go with them
+    ['dfs-play', 'dfs-step', 'dfs-reset'].forEach(id => { const b = document.getElementById(id); b.replaceWith(b.cloneNode(true)); });
+    d3.select('#graph-svg').selectAll('*').remove();
+    document.getElementById('cycle-list').innerHTML = '';
+    document.getElementById('c-total').textContent = 2 * data.segments.length;
+    renderFunnel(data.stats, data.segments.length);
+    const fixed = data.segments.every(s => s.x !== undefined);
     const seg = id => id.slice(0, -1);
-    const nodes = data.segments.map(s => ({ ...s }));
+    // drawn layouts are stored in a wide frame; halving it lets the fit zoom in so nodes and labels read at full size
+    const nodes = data.segments.map(s => s.x !== undefined ? { ...s, x: s.x * 0.5, y: s.y * 0.5 } : { ...s });
     const byId = new Map(nodes.map(n => [n.id, n]));
-    const radius = n => 2.4 + Math.sqrt(n.len) / 15;
+    const radius = n => (data.segments.length < 40 ? 6 : 2.4) + Math.sqrt(n.len) / (data.segments.length < 40 ? 9 : 15);
     const key = (a, b) => a < b ? a + '|' + b : b + '|' + a;
     const linkMap = new Map();
     data.links.forEach(([a, , b]) => { if (a !== b && !linkMap.has(key(a, b))) linkMap.set(key(a, b), { source: a, target: b, k: key(a, b) }); });
     const links = [...linkMap.values()];
 
-    // Deterministic layout (d3-force uses a fixed-seed LCG)
+    // A drawn layout when the dataset has one; otherwise a deterministic force layout (d3-force uses a fixed-seed LCG)
+    if (fixed) links.forEach(l => { l.source = byId.get(l.source); l.target = byId.get(l.target); });
+    else {
     const sim = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(links).id(d => d.id).distance(l => 6 + radius(l.source) + radius(l.target)).strength(0.9))
       .force('charge', d3.forceManyBody().strength(-26).distanceMax(260))
@@ -387,6 +415,7 @@
       .force('x', d3.forceX(0).strength(0.02)).force('y', d3.forceY(0).strength(0.03))
       .stop();
     for (let i = 0; i < 600; i++) sim.tick();
+    }
 
     const svg = d3.select('#graph-svg');
     const W = svg.node().clientWidth || 800, H = svg.node().clientHeight || 600;
@@ -403,6 +432,9 @@
       .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', radius)
       .style('fill', 'var(--host)').style('stroke', 'var(--surface)').style('stroke-width', 1);
     const nodeEl = new Map(); nodeSel.each(function (d) { nodeEl.set(d.id, this); });
+    if (fixed) gNodes.selectAll('text').data(nodes).join('text')
+      .attr('x', d => d.x).attr('y', d => d.y + radius(d) + 13).attr('text-anchor', 'middle')
+      .attr('class', 'svg-small').style('font-size', '9px').text(d => d.id);
 
     const zoom = d3.zoom().scaleExtent([0.4, 8]).on('zoom', e => root.attr('transform', e.transform));
     svg.call(zoom);
@@ -483,7 +515,8 @@
     }
     function finish() {
       playing = false; playBtn.textContent = '↻ Replay';
-      status.innerHTML = `<b>Search finished.</b> ${nBack} back-edges and ${nRev} reverse-complement back-edges gave 40 paths, which reduce to <b>${data.cycles.length} candidate cycles</b>. Ranked by score below.`;
+      showCycle(0);
+      status.innerHTML = `<b>Search finished.</b> ${nBack} back-edges and ${nRev} reverse-complement back-edges gave ${data.stats.all_paths + data.stats.reverse_paths} paths, which reduce to <b>${data.cycles.length} candidate cycles</b>. Ranked by score below.`;
     }
     function loop() {
       if (!playing) return;
@@ -514,14 +547,14 @@
     const cycles = data.cycles.map((c, i) => ({ ...c, num: c.name.split('_').pop() }))
       .sort((a, b) => b.score3 - a.score3);
     const KIND = { is: 'var(--is)', xeno: 'var(--xeno)', amr: 'var(--accent)', ct: 'var(--rev)', orf: 'var(--done)' };
-    const pretty = n => n.replace(/^ISFinder_|^PICOTA_/, '').replace(/_/g, ' ').replace(/-MF\d+\.\d+$/, '');
+    const pretty = n => n.split('|')[0].replace(/^ISFinder_|^PICOTA_/, '').replace(/_/g, ' ').replace(/-[A-Z]{1,2}_?\d+(\.\d+)?$/, '');
     let selected = null;
     cycles.forEach((c, rank) => {
       const genes = c.features.filter(f => f.k !== 'orf');
       const chips = genes.map(f => `<span class="gchip" style="--c:${KIND[f.k]}">${f.k === 'is' ? 'IS' : f.k === 'xeno' ? 'xeno' : f.k.toUpperCase()} · ${pretty(f.name)}</span>`).join('');
       const b = document.createElement('button');
       b.className = 'cycle-card';
-      b.innerHTML = `<div class="cc-h"><span><span class="rank">#${rank + 1}</span> Cycle ${c.num}${c.rev ? '<span class="tag">reverse-oriented</span>' : ''}</span>
+      b.innerHTML = `<div class="cc-h"><span><span class="rank">#${rank + 1}</span> Cycle ${c.num}${c.rev ? '<span class="tag">reverse-oriented</span>' : ''}${c.truth ? `<span class="truth ${c.truth}">${c.truth === 'planted' ? 'planted' : 'look-alike'}</span>` : ''}</span>
           <span class="score-pill ${c.reported ? 'pass' : ''}">${c.score3.toFixed(1)}</span></div>
         <div class="cc-m">${(c.len / 1000).toFixed(1)} kb · ${c.path.length} contigs${c.reported ? ' · <b class="ok">reported</b>' : c.no_is ? ' · no IS found' : ' · below 50'}</div>
         ${chips ? `<div class="gchips">${chips}</div>` : ''}`;
@@ -627,7 +660,7 @@
       const c = cycles[rank];
       gNodes.style('opacity', 0.3); gLinks.style('opacity', 0.3);
       const ns = drawDirected(c);
-      fitTo(ns, 800);
+      fitTo(fixed ? nodes : ns, 800);   // a small drawn graph stays whole; a real one zooms to the cycle
       detail.hidden = false;
       ringMap(c);
       const lg = lengthGate(c.len), cf = componentFit(c.comp);
@@ -635,6 +668,7 @@
       const orfs = c.features.length - genes.length;
       info.innerHTML = `
         <div class="ci-h"><h3>Cycle ${c.num}</h3>${c.category ? `<span class="badge">${c.category}</span>` : ''}${c.reported ? '<span class="badge ok">reported</span>' : ''}</div>
+        ${c.truth_note ? `<p class="ci-truth ${c.truth}"><b>${c.truth === 'planted' ? 'Built as' : 'Look-alike'}:</b> ${c.truth_note}</p>` : ''}
         <p class="ci-sum">${c.reported ? 'Clears the threshold: an insertion sequence and cargo on a cycle of plausible length.'
           : c.no_is ? 'No insertion sequence on this cycle, so the IS gate is 0 and the score with it — most likely the host\'s own repeat structure.'
           : 'Carries an IS but no cargo hit, so cargo falls back to the 0.30 floor; with this length and component count it stays under 50.'}</p>
@@ -650,6 +684,7 @@
       status.innerHTML = `<b>Cycle ${c.num}</b> — follow the arrows: ${c.path.length} oriented contigs, and the last leads back into the first. ${c.rev ? 'Found through a reverse-complement back-edge, so it turns through an inverted repeat.' : ''}`;
     }
     reset();
-    showCycle(0);
+    teardown = () => { playing = false; cancelAnimationFrame(ringMap.raf); };
+    detail.hidden = true;   // nothing selected until the search has run or a cycle is picked
   }
 })();

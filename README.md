@@ -23,4 +23,13 @@ The cycle scores, gene hits and ORFs come from `picota scoring` on those cycles 
 That run used CARD protein homolog models, the ISfinder/TnCentral IS set and the known composite
 transposons; the xenobiotic set was the curated one only.
 
+`data/demo.gfa` is an illustrative graph drawn by hand from real IS and CARD sequences (not an
+assembly): two composite transposons and three look-alikes. It is made, run through PICOTA and
+finished with
+
+    python3 tools/make_demo_gfa.py picota_IS_db.fasta card.json data/demo.gfa tools/demo_layout.json
+    python3 tools/export_nitro.py /path/to/picota <outdir> data/demo.gfa demo.json
+    python3 tools/export_scores.py demo.json <scoring output> <Prodigal_Out/sample> 0
+    python3 tools/finish_demo.py demo.json tools/demo_layout.json card.json
+
 Preview locally with `python3 -m http.server` from this folder.
