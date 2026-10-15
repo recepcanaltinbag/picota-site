@@ -61,13 +61,46 @@
     alive.forEach((d, i) => m.set(d, { x: ox + (i % cols + 0.5) * cell, y: oy + (Math.floor(i / cols) + 0.5) * cell, r: Math.max(1.6, cell * 0.5) }));
     return m;
   }
-  function layoutAll() { for (let s = 0; s <= STAGES.length; s++) pos[s] = layout(s); }
+  // Stage 0 is drawn as a tangle, the way the candidates come out of an assembly graph:
+  // points strung along chains that cross and share nodes, each joined to its nearest neighbours.
+  const gx = new Float32Array(N), gy = new Float32Array(N);
+  (function tangle() {
+    let d = 0;
+    while (d < N) {
+      let x = rand(), y = rand(), ang = rand() * 2 * Math.PI;
+      const len = 12 + Math.floor(rand() * 30);
+      for (let j = 0; j < len && d < N; j++, d++) {
+        ang += (rand() - 0.5) * 1.3;
+        x = Math.min(0.98, Math.max(0.02, x + Math.cos(ang) * 0.022));
+        y = Math.min(0.98, Math.max(0.02, y + Math.sin(ang) * 0.034));
+        gx[d] = x; gy[d] = y;
+      }
+    }
+  })();
+  const edges = [];
+  (function neighbours() {
+    for (let d = 0; d < N; d++) {
+      let b1 = -1, b2 = -1, d1 = 1e9, d2 = 1e9;
+      for (let e = 0; e < N; e++) {
+        if (e === d) continue;
+        const q = (gx[d] - gx[e]) ** 2 + (gy[d] - gy[e]) ** 2;
+        if (q < d1) { d2 = d1; b2 = b1; d1 = q; b1 = e; } else if (q < d2) { d2 = q; b2 = e; }
+      }
+      if (b1 > d) edges.push([d, b1]);
+      if (b2 > d && rand() < 0.6) edges.push([d, b2]);
+    }
+  })();
+  function layoutAll() {
+    for (let s = 0; s <= STAGES.length; s++) pos[s] = layout(s);
+    const pad = 14, r0 = [...pos[0].values()][0].r;
+    for (let d = 0; d < N; d++) pos[0].set(d, { x: pad + gx[d] * (W - 2 * pad), y: pad + gy[d] * (H - 2 * pad), r: r0 });
+  }
 
   let stage = 0, t = 1;   // t: progress of the move into `stage`
   function colours() {
     const cs = getComputedStyle(document.documentElement);
     const v = n => cs.getPropertyValue(n).trim();
-    return { live: v('--accent'), gone: v('--done'), ok: v('--good'), is: v('--is'), ink: v('--ink') };
+    return { live: v('--muted'), gone: v('--done'), ok: v('--good'), other: v('--host'), is: v('--is'), ink: v('--ink'), edge: v('--edge') };
   }
   // Each candidate is drawn as a small cycle: a ring with its IS node, sized by the cycle's
   // length. The size filter's rejects are the rings that are too small or too large; the
@@ -77,7 +110,7 @@
   const phase0 = Array.from({ length: N }, () => rand() * 2 * Math.PI);
 
   function glyph(d, x, y, r, c, state, now) {
-    const R = r * 0.74 * sf[d], lw = Math.max(1, r * 0.22);
+    const R = r * 0.74 * sf[d], lw = Math.min(4.5, Math.max(1, r * 0.2));
     if (R < 2.2) { ctx.fillStyle = state === 'gone' ? c.gone : c.live; ctx.beginPath(); ctx.arc(x, y, Math.max(1.2, R), 0, 2 * Math.PI); ctx.fill(); return; }
     const top = -Math.PI / 2, isArc = 0.55;
     ctx.lineWidth = lw; ctx.lineCap = 'butt';
@@ -86,7 +119,7 @@
     }
     const resolved = state === 'final';
     // cargo (or, before scoring decides, the rest of the cycle)
-    ctx.strokeStyle = resolved ? (complete.has(d) ? c.ok : c.live) : c.live;
+    ctx.strokeStyle = resolved ? (complete.has(d) ? c.ok : c.other) : c.live;
     ctx.beginPath(); ctx.arc(x, y, R, top + isArc / 2, top - isArc / 2 + 2 * Math.PI); ctx.stroke();
     // the collapsed IS node the cycle runs through
     ctx.strokeStyle = c.is; ctx.lineWidth = lw * 1.5;
@@ -102,22 +135,38 @@
     }
   }
 
+  const cx = new Float32Array(N), cy = new Float32Array(N), cr = new Float32Array(N);
   function draw(now = performance.now()) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     const c = colours();
     const from = pos[Math.max(0, stage - 1)], to = pos[stage], e = ease(t);
     const final = stage === STAGES.length;
+    const graphness = stage === 0 ? 1 : stage === 1 ? 1 - e : 0;   // the tangle dissolves on the first move
+    for (let d = 0; d < N; d++) {
+      const a = from.get(d), b = to.get(d);
+      cr[d] = 0;
+      if (!a && !b) continue;
+      if (b && a) { cx[d] = a.x + (b.x - a.x) * e; cy[d] = a.y + (b.y - a.y) * e; cr[d] = a.r + (b.r - a.r) * e; }
+      else if (b) { cx[d] = b.x; cy[d] = b.y; cr[d] = b.r; }
+      else { cx[d] = a.x; cy[d] = a.y + 14 * e; cr[d] = a.r * (1 - 0.4 * e); }
+    }
+    if (graphness > 0) {
+      ctx.globalAlpha = 0.55 * graphness; ctx.strokeStyle = c.edge; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (const [p, q] of edges) { ctx.moveTo(cx[p], cy[p]); ctx.lineTo(cx[q], cy[q]); }
+      ctx.stroke();
+    }
     for (let d = 0; d < N; d++) {
       const a = from.get(d), b = to.get(d);
       if (!a && !b) continue;
       if (final && !a) continue;
-      let x, y, r, state = final ? 'final' : 'live';
-      ctx.globalAlpha = 1;
-      if (b && a) { x = a.x + (b.x - a.x) * e; y = a.y + (b.y - a.y) * e; r = a.r + (b.r - a.r) * e; }
-      else if (b) { x = b.x; y = b.y; r = b.r; }
-      else { x = a.x; y = a.y + 14 * e; r = a.r * (1 - 0.4 * e); state = 'gone'; ctx.globalAlpha = 1 - e; }   // eliminated here
-      glyph(d, x, y, r, c, state, now);
+      const state = b ? (final ? 'final' : 'live') : 'gone';
+      ctx.globalAlpha = state === 'gone' ? (1 - e) * 0.8 : 1;
+      if (graphness > 0.5) {         // still a graph node
+        ctx.fillStyle = state === 'gone' ? c.gone : c.live;
+        ctx.beginPath(); ctx.arc(cx[d], cy[d], 2.1, 0, 2 * Math.PI); ctx.fill();
+      } else glyph(d, cx[d], cy[d], cr[d], c, state, now);
     }
     ctx.globalAlpha = 1;
   }

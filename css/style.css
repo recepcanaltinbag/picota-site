@@ -505,3 +505,6 @@ section[id].section { scroll-margin-top: -7px; }
   .elim-step b { font-size: .74rem; }
   #elim-canvas { height: 280px; }
 }
+
+/* the side panel scrolls; its parts keep their own height instead of being squeezed */
+#explore .side-panel > * { flex-shrink: 0; }

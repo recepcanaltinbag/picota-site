@@ -9,14 +9,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=202610160055">
+<link rel="stylesheet" href="css/style.css?v=202610160118">
 <script>try{var t=localStorage.getItem('picota-theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
 </head>
 <body>
 
 <header class="nav">
   <div class="nav-inner">
-    <a class="brand" href="#top"><img src="assets/picota_icon.png" alt=""><span>PICOTA</span></a>
+    <a class="brand" href="#" id="to-top"><img src="assets/picota_icon.png" alt=""><span>PICOTA</span></a>
     <nav class="nav-links">
       <a href="#collapse">Idea</a>
       <a href="#explore">Explore</a>
@@ -171,7 +171,7 @@
       </div>
       <div class="cycle-info" id="cycle-info"></div>
     </div>
-    <p class="caption"><b>Figure 3.</b> Cycle detection on an assembly graph. <b>(a)</b> The assembly graph — the hand-drawn demo or the bundled <em>P. nitroreducens</em> graph — one node per contig, sized by length; the DFS replay colours nodes on the stack and the back-edges that close cycles, and the selected cycle is drawn as its walk. <b>(b)</b> Circular map of the selected cycle: contigs in walk order on the outer ring, PICOTA's IS and cargo hits on the middle ring, Prodigal ORFs (+ strand outside, − strand inside) on the inner ring.</p>
+    <p class="caption"><b>Figure 3.</b> Cycle detection on an assembly graph. <b>(a)</b> The assembly graph — the synthetic demo with two planted composite transposons, or the bundled <em>P. nitroreducens</em> graph — one node per contig, sized by length; the DFS replay colours nodes on the stack and the back-edges that close cycles, and the selected cycle is drawn as its walk. <b>(b)</b> Circular map of the selected cycle: contigs in walk order on the outer ring, PICOTA's IS and cargo hits on the middle ring, Prodigal ORFs (+ strand outside, − strand inside) on the inner ring.</p>
 
     <div class="funnel" id="nitro-funnel"></div>
     <p class="fineprint">From back-edges to candidates: for each back-edge, all simple paths from its target back to its source (up to <code>path_limit</code> = 25 nodes) are enumerated, sequences are rebuilt from contig overlaps, cycles outside 1–40 kb are dropped, and near-duplicates are removed — first by strand-agnostic contig sets, then by k-mer Jaccard similarity.</p>
@@ -197,7 +197,7 @@
         </div>
       </div>
     </div>
-    <p class="caption"><b>Figure 4.</b> Candidate cycles at each stage of one PICOTA run, from the paths its depth-first search enumerates to the cycles it reports. Each ring is one candidate cycle, drawn through its <span class="sw" style="--c:var(--is)"></span>IS node and sized by length; the size filter removes the rings too small or too large. Among the survivors, <span class="sw" style="--c:var(--good)"></span>complete elements (8 of 8) and <span class="sw" style="--c:var(--accent)"></span>other reported cycles.</p>
+    <p class="caption"><b>Figure 4.</b> Candidate cycles at each stage of one PICOTA run, from the paths its depth-first search enumerates to the cycles it reports. The candidates start as paths through the assembly graph; after the first filter each is drawn as a small cycle through its <span class="sw" style="--c:var(--is)"></span>IS node, sized by length, so the size filter removes the rings too small or too large. Among the survivors, <span class="sw" style="--c:var(--good)"></span>complete elements (8 of 8) and <span class="sw" style="--c:var(--host)"></span>other reported cycles.</p>
   </div>
 </section>
 
@@ -350,8 +350,14 @@ pip install -r requirements.txt</code></pre></div>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="js/main.js?v=202610160055"></script>
-<script src="js/filter.js?v=202610160059"></script>
-<script src="js/benchmark.js?v=202610160055"></script>
+<script>
+  // A reload starts at the top (or at the linked section), never at a remembered offset under the bar.
+  try { history.scrollRestoration = 'manual'; } catch (e) {}
+  if (!location.hash) window.scrollTo(0, 0);
+  document.getElementById('to-top').addEventListener('click', e => { e.preventDefault(); history.replaceState(null, '', location.pathname); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+</script>
+<script src="js/main.js?v=202610160118"></script>
+<script src="js/filter.js?v=202610160118"></script>
+<script src="js/benchmark.js?v=202610160118"></script>
 </body>
 </html>

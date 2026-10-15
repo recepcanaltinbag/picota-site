@@ -366,7 +366,7 @@
 
   /* ---------- graph explorer ---------- */
   const DATASETS = {
-    demo: { url: 'data/demo.json', about: 'Demo graph: drawn by hand from real IS and CARD sequences — not an assembly — with two composite transposons and three look-alikes. The chromosome itself closes a ~60 kb cycle that detection drops at the 40 kb limit, and a SNP bubble is two parallel paths, not a cycle. <a href="data/demo.gfa" download>Download demo.gfa</a>.' },
+    demo: { url: 'data/demo.json', about: 'Demo graph: a synthetic genome with host IS elements, rRNA operons and short repeats, collapsed the way a short-read assembler collapses them — 251 contigs, 328 links. Two composite transposons were planted in it; PICOTA is not told where. Built from real IS and CARD sequences; not an assembly. <a href="data/demo.gfa" download>Download demo.gfa</a>.' },
     nitro: { url: 'data/nitro.json', about: 'Real data: the <em>P. nitroreducens</em> assembly graph bundled with the repository, 272 contigs and 311 links.' },
   };
   const cache = {};
