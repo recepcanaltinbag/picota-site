@@ -38,7 +38,7 @@
       if (k === 'gap') svg += `<rect x="${x}" y="17" width="${pw}" height="20" style="fill:var(--surface)"/><text x="${x + pw / 2}" y="31" text-anchor="middle" class="svg-small">…</text>`;
       x += pw;
     });
-    if (id === 'shared_is') svg += `<text x="296" y="10" text-anchor="end" class="svg-small" style="fill:var(--is)">×16 IS copies</text>`;
+    if (id === 'shared_is') svg += `<text x="296" y="10" text-anchor="end" class="svg-small" style="fill:var(--is)">multi-copy IS</text>`;
     if (id === 'novel_cargo') svg += `<text x="150" y="31" text-anchor="middle" class="svg-small" style="fill:var(--cargo)">?</text>`;
     return svg + '</svg>';
   }

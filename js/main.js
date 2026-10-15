@@ -267,7 +267,7 @@
     const presets = [
       { n: 'Typical element', is: 0.92, noIs: false, len: 5200, comp: 2, cargo: 0.88, novel: false },
       { n: 'Novel cargo', is: 0.9, noIs: false, len: 6400, comp: 2, cargo: 0.5, novel: true },
-      { n: '16-copy IS', is: 0.95, noIs: false, len: 4800, comp: 16, cargo: 0.9, novel: false },
+      { n: 'Multi-copy IS', is: 0.95, noIs: false, len: 4800, comp: 16, cargo: 0.9, novel: false },
       { n: 'Host repeat', is: 0.62, noIs: false, len: 17800, comp: 11, cargo: 0.4, novel: true },
       { n: 'Oversized', is: 0.95, noIs: false, len: 36000, comp: 3, cargo: 0.95, novel: false },
       { n: 'No IS', is: 0.9, noIs: true, len: 5000, comp: 2, cargo: 0.95, novel: false },
