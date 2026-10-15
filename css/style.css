@@ -448,3 +448,23 @@ p { font-size: 1.06rem; line-height: 1.65; }
   .idea-step:not(.on) .idea-t { display: none; }
   .idea-step { padding: 10px 14px; }
 }
+
+/* Menu jumps land with the section heading just under the sticky bar */
+html { scroll-padding-top: 0; }
+/* margin = sticky bar (57px) + 24px gap - the section's top padding */
+section[id].section { scroll-margin-top: -7px; }
+#collapse.section { scroll-margin-top: 25px; }
+
+/* Explorer fits the screen: graph height follows the viewport, the side panel scrolls beside it */
+#explore h2 { margin-bottom: 0; }
+#explore .explorer { margin-top: 20px; --gh: clamp(340px, calc(100vh - 330px), 640px); }
+#graph-svg { height: var(--gh); }
+@media (min-width: 961px) {
+  #explore .side-panel { max-height: calc(var(--gh) + 98px); overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
+}
+.about { border-top: 1px solid var(--line); padding-top: 10px; font-size: .86rem; }
+.about summary { cursor: pointer; font-weight: 600; color: var(--ink-2); list-style: none; display: flex; align-items: center; gap: 6px; }
+.about summary::-webkit-details-marker { display: none; }
+.about summary::before { content: "+"; font: 600 .9rem "JetBrains Mono", monospace; color: var(--accent); width: 12px; }
+.about[open] summary::before { content: "−"; }
+.about p { font-size: .9rem; margin: 8px 0 0; }
