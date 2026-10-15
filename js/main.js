@@ -162,8 +162,8 @@
     // Plays on its own in a loop while on screen: line → reads → cycle, hold, unwind, again.
     // A step click shows that step and the loop resumes after a pause; the button stops it for good.
     const HOLD = [1600, 2200, 3000];
-    let prog = STOPS[0], anim = null, timer = null, playing = false, userPaused = false, visible = false;
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // The loop runs continuously; it only rests while the figure is off screen.
+    let prog = STOPS[0], anim = null, timer = null, playing = false, userPaused = false, visible = true;
     function tweenTo(target, dur, done) {
       cancelAnimationFrame(anim);
       const from = prog, t0 = performance.now();
@@ -191,7 +191,7 @@
       tweenTo(STOPS[i], i === 2 ? 2200 : 1200, () => { timer = setTimeout(loop, i === 2 ? 0 : HOLD[i]); });
     }
     function play() {
-      if (playing || reduce) return;
+      if (playing) return;
       playing = true; playBtn.textContent = '❚❚ Pause';
       loop();
     }
@@ -209,10 +209,10 @@
     });
     steps.forEach((s, i) => s.addEventListener('click', () => {
       stop(); tweenTo(STOPS[i], 1000);
-      if (!userPaused) maybeResume(6000);
+      userPaused = false; maybeResume(3000);
     }));
     render(prog);
-    if (reduce) { prog = 1; render(prog); }
+    play();
     new IntersectionObserver(es => es.forEach(e => {
       visible = e.isIntersecting;
       if (visible && !userPaused) maybeResume(300); else if (!visible) stop();
