@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PICOTA — Composite transposons from assembly graphs</title>
+<meta name="description" content="PICOTA recovers composite transposons from short-read assembly graphs by finding the cycles they leave behind. An interactive walkthrough of the algorithm.">
+<link rel="icon" href="assets/picota_icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script>try{var t=localStorage.getItem('picota-theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top"><img src="assets/picota_icon.png" alt=""><span>PICOTA</span></a>
+    <nav class="nav-links">
+      <a href="#collapse">Idea</a>
+      <a href="#explore">Explore</a>
+      <a href="#scoring">Scoring</a>
+      <a href="#benchmark">Benchmark</a>
+      <a href="#start">Get started</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle colour theme">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+      </button>
+      <a class="btn btn-small" href="https://github.com/recepcanaltinbag/picota">
+        <svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">Pipeline for Identification of Composite Transposons from Assembly graphs</p>
+      <h1>The element is gone from the contigs.<br><span class="accent">Its shape is still in the graph.</span></h1>
+      <p class="lead">A composite transposon is cargo — resistance genes, a degradation pathway — flanked by two copies of the same insertion sequence. Short-read assemblers collapse those copies, so the element rarely survives as a contig. What survives is a <strong>cycle in the assembly graph</strong>. PICOTA finds those cycles and scores them.</p>
+      <div class="hero-cta">
+        <a class="btn" href="#explore">Explore a real graph</a>
+        <a class="btn btn-ghost" href="#start">Install</a>
+      </div>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <svg viewBox="0 0 320 320" id="hero-ring"></svg>
+    </div>
+  </div>
+  <div class="wrap stats">
+    <div class="stat"><b data-count="98.5" data-suffix="%">98.5%</b><span>of implanted elements recovered</span></div>
+    <div class="stat"><b data-count="91.2" data-suffix="%">91.2%</b><span>precision after scoring</span></div>
+    <div class="stat"><b data-count="92" data-suffix="%">92%</b><span>recovered from the graph, against 18% from SPAdes contigs</span></div>
+    <div class="stat"><b>0 / 180</b><span>wild-type candidates clear the threshold</span></div>
+  </div>
+  <p class="wrap fineprint">Simulated benchmark: 200 elements in 50 genomes, five of six architectures. See <a href="#benchmark">Benchmark</a> for the sixth.</p>
+</section>
+
+<!-- COLLAPSE STORY -->
+<section id="collapse" class="story">
+  <div class="story-sticky">
+    <div class="wrap story-grid">
+      <div class="story-steps">
+        <p class="eyebrow">01 · The idea</p>
+        <div class="step" data-step="0">
+          <h2>In the genome, the element is linear.</h2>
+          <p>An insertion sequence, the cargo it carries, and a second copy of the same insertion sequence, sitting in the host chromosome.</p>
+        </div>
+        <div class="step" data-step="1">
+          <h2>The reads cannot tell the two IS copies apart.</h2>
+          <p>Every read from one copy matches the other just as well. The assembler has no way to decide which copy a read came from, so it keeps one.</p>
+        </div>
+        <div class="step" data-step="2">
+          <h2>In the graph, it becomes a cycle.</h2>
+          <p>One IS node, entered from the chromosome and from the end of the cargo, left towards the cargo and back to the chromosome. IS + cargo close a loop, shorter than the element itself, with the IS node at twice the read depth.</p>
+        </div>
+        <div class="progress-dots"><i></i><i></i><i></i></div>
+      </div>
+      <div class="story-visual">
+        <svg viewBox="0 0 760 360" id="collapse-svg" role="img" aria-label="Animation: a linear IS-cargo-IS element bends into a cycle as the two IS copies collapse onto one node"></svg>
+        <p class="hint">Scroll to collapse</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTIGS VS GRAPH -->
+<section id="contigs" class="section">
+  <div class="wrap two-col">
+    <div>
+      <p class="eyebrow">02 · Why not just read the contigs?</p>
+      <h2>The data is there. No contig carries it whole.</h2>
+      <p>An element counts as recovered only when a single contig — or a single detected cycle — carries at least 95% of it in one alignment. Across 520 simulated elements:</p>
+      <p class="muted">With two genomic IS copies and nothing repeating inside the element, SPAdes contigs recover 52–78%. One more copy of that IS takes them to 5–7.5%. The graph holds 95–100% in each case.</p>
+    </div>
+    <div class="bars" id="route-bars"></div>
+  </div>
+</section>
+
+<!-- EXPLORER -->
+<section id="explore" class="section section-alt">
+  <div class="wrap">
+    <p class="eyebrow">03 · Cycle detection, live</p>
+    <h2>Run PICOTA's DFS on <code>testNitro.gfa</code></h2>
+    <p class="section-lead">The <em>P. nitroreducens</em> assembly graph bundled with the repository: 272 contigs, 311 links. Each contig is two nodes, one per strand. A depth-first search walks them; an edge back to a node still on the stack — or to its reverse complement — closes a cycle. This is the actual event order of <code>dfs_iterative</code>, and the five cycles are PICOTA's actual output on this file.</p>
+
+    <div class="explorer">
+      <div class="graph-panel">
+        <div class="graph-toolbar">
+          <button class="btn btn-small" id="dfs-play">▶ Run DFS</button>
+          <button class="btn btn-small btn-ghost" id="dfs-step">Step</button>
+          <button class="btn btn-small btn-ghost" id="dfs-reset">Reset</button>
+          <label class="speed">Speed <input type="range" id="dfs-speed" min="1" max="60" value="18"></label>
+        </div>
+        <svg id="graph-svg" role="img" aria-label="Assembly graph of testNitro.gfa"></svg>
+        <div class="graph-legend">
+          <span><i class="lg lg-stack"></i>on the DFS stack</span>
+          <span><i class="lg lg-done"></i>finished</span>
+          <span><i class="lg lg-back"></i>back-edge (cycle)</span>
+          <span><i class="lg lg-rev"></i>reverse-complement back-edge</span>
+        </div>
+        <div class="graph-tip" id="graph-tip" hidden></div>
+      </div>
+      <aside class="side-panel">
+        <div class="counters">
+          <div><b id="c-visited">0</b><span>nodes visited / 544</span></div>
+          <div><b id="c-back">0</b><span>back-edges</span></div>
+          <div><b id="c-rev">0</b><span>reverse back-edges</span></div>
+        </div>
+        <p class="dfs-status" id="dfs-status">Press <b>Run DFS</b> to replay the search, or pick a detected cycle below.</p>
+        <h3 class="side-h">Detected cycles</h3>
+        <div id="cycle-list" class="cycle-list"></div>
+      </aside>
+    </div>
+
+    <div class="funnel" id="nitro-funnel"></div>
+    <p class="fineprint">From back-edges to candidates: for each back-edge, all simple paths from its target back to its source (up to <code>path_limit</code> = 25 nodes) are enumerated, sequences are rebuilt from contig overlaps, cycles outside 1–40 kb are dropped, and near-duplicates are removed — first by strand-agnostic contig sets, then by k-mer Jaccard similarity.</p>
+  </div>
+</section>
+
+<!-- SCORING -->
+<section id="scoring" class="section">
+  <div class="wrap">
+    <p class="eyebrow">04 · Scoring</p>
+    <h2>Most cycles are the host's own repeats. The score separates them.</h2>
+    <p class="section-lead">Detection casts wide on purpose — about 23 candidate cycles per genome to find 4 elements. <code>score3</code> is bounded 0–100: two gates that can zero it outright, and two equally weighted terms.</p>
+
+    <div class="formula" id="formula">
+      <span class="f-out">score3</span> = 100 ×
+      <span class="f-term f-gate" data-k="is">IS_gate</span> ×
+      <span class="f-term f-gate" data-k="len">length_gate</span> ×
+      ( 0.50 · <span class="f-term" data-k="comp">component_fit</span> + 0.50 · <span class="f-term" data-k="cargo">cargo_quality</span> )
+    </div>
+
+    <div class="calc">
+      <div class="calc-inputs">
+        <div class="presets" id="presets"></div>
+
+        <div class="ctrl">
+          <div class="ctrl-h"><label for="in-is">IS hit quality</label><output id="o-is"></output></div>
+          <input type="range" id="in-is" min="0" max="1" step="0.01" value="0.92">
+          <label class="check"><input type="checkbox" id="in-nois"> No insertion sequence found</label>
+          <p class="ctrl-note">identity × coverage of the best IS hit. Gate = 0.5 + 0.5 × quality, or 0 with no IS.</p>
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-h"><label for="in-len">Cycle length</label><output id="o-len"></output></div>
+          <input type="range" id="in-len" min="1000" max="40000" step="50" value="5200">
+          <p class="ctrl-note">Shorter than the CT mean (5,850 bp) pays nothing; the gate falls with z-score, to zero at z = 20.</p>
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-h"><label for="in-comp">Graph components</label><output id="o-comp"></output></div>
+          <input type="range" id="in-comp" min="1" max="25" step="1" value="2">
+          <p class="ctrl-note">1 / (1 + |n − 2| / 12). A host-repeat filter: cycles wandering host repeats sit near 11.</p>
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-h"><label for="in-cargo">Cargo quality</label><output id="o-cargo"></output></div>
+          <input type="range" id="in-cargo" min="0" max="1" step="0.01" value="0.88">
+          <label class="check"><input type="checkbox" id="in-novel"> No database hit (novel cargo)</label>
+          <p class="ctrl-note">Best CARD / xenobiotic hit, (aln / subject length) × identity. With no hit, a floor of 0.30 keeps novel cargo reportable.</p>
+        </div>
+      </div>
+
+      <div class="calc-out">
+        <div class="gauge">
+          <svg viewBox="0 -18 220 148" id="gauge-svg"></svg>
+          <div class="gauge-num"><b id="score-num">0</b><span>/ 100</span></div>
+        </div>
+        <div class="verdict" id="verdict"></div>
+        <div class="terms" id="terms"></div>
+        <p class="fineprint">The 0.50 / 0.50 split is measured, not chosen: across the 1,272 benchmark candidates it gives the best F1, and its own optimal threshold lands on 50 — the value <code>threshold_final_score</code> ships with.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BENCHMARK -->
+<section id="benchmark" class="section section-alt">
+  <div class="wrap">
+    <p class="eyebrow">05 · Benchmark</p>
+    <h2>Six architectures, scored at a threshold of 50.</h2>
+    <p class="section-lead">Composite transposons implanted into <em>E. coli</em> K-12 MG1655, so the answer is known by construction: ten genomes per architecture, four elements each. An element counts as recovered when one reported cycle covers ≥ 95% of it at ≥ 95% identity. Detection runs at about 17% precision; scoring takes that to <strong>91.2%</strong> while keeping <strong>98.5%</strong> of the elements.</p>
+    <div class="scenarios" id="scenarios"></div>
+    <div class="callout">
+      <b>Known limit.</b> When the flanking IS also occurs inside the cargo (<code>cargo_is_same</code>), only 2 of 40 elements are covered by any candidate cycle. The loss is in detection, not scoring, so no threshold recovers it.
+    </div>
+
+    <div class="bm-block">
+      <div class="two-col bm-head">
+        <div>
+          <h3 class="bm-h">Add IS copies and the contigs lose the element. The graph does not.</h3>
+          <p>The 40 baseline elements re-implanted at six flanking-IS copy numbers. MobileElementFinder (MEF) recovers them from a complete chromosome, but from contigs it can only find what a single contig still carries whole.</p>
+        </div>
+        <div class="series-toggle" id="cn-legend"></div>
+      </div>
+      <div class="chart-box">
+        <svg id="cn-chart" role="img" aria-label="Elements recovered against flanking-IS copy number for PICOTA and MobileElementFinder"></svg>
+        <div class="chart-tip" id="cn-tip" hidden></div>
+      </div>
+      <p class="fineprint">PICOTA on the MEGAHIT graph counts candidate cycles covering an element before scoring (detection only). Hover a copy number for precision and prediction counts.</p>
+    </div>
+
+    <div class="bm-block two-col bm-neg">
+      <div>
+        <h3 class="bm-h">Nothing implanted, nothing reported.</h3>
+        <p>Ten wild-type MG1655 genomes, simulated, assembled and searched exactly like the others. The graph closes 12–22 cycles per genome through the host's own repeats; none of the 180 clears <code>score3</code> &gt; 50.</p>
+      </div>
+      <div class="bars" id="neg-bars"></div>
+    </div>
+
+    <div class="bm-block">
+      <div class="table-head">
+        <div>
+          <h3 class="bm-h">The implanted elements</h3>
+          <p class="muted" id="el-count"></p>
+        </div>
+        <span class="preview-badge">Preview</span>
+      </div>
+      <div class="table-ctrl">
+        <div class="chips" id="el-groups"></div>
+        <input type="search" id="el-search" placeholder="Search the preview…" aria-label="Search elements">
+      </div>
+      <div class="table-wrap"><table class="el-table" id="el-table"><thead></thead><tbody></tbody></table></div>
+      <div class="pager" id="el-pager"></div>
+      <p class="fineprint" id="el-note"></p>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline" class="section">
+  <div class="wrap">
+    <p class="eyebrow">06 · Pipeline</p>
+    <h2>From an SRA accession to annotated elements.</h2>
+    <p class="section-lead">Every stage is a subcommand. Stages 3–7 run alone on a GFA you already have.</p>
+    <ol class="pipeline" id="pipeline-list"></ol>
+  </div>
+</section>
+
+<!-- START -->
+<section id="start" class="section section-alt">
+  <div class="wrap two-col">
+    <div>
+      <p class="eyebrow">07 · Get started</p>
+      <h2>Run it on the bundled graph in one command.</h2>
+      <p>No download, no assembly: detection, scoring and annotation over <code>testNitro.gfa</code> with the shipped settings. Linux, Python ≥ 3.8, BLAST+ and Prodigal.</p>
+      <p class="muted">Reference databases (CARD, ISfinder/TnCentral, KEGG xenobiotics, known composite transposons) are not in the git repository; the prepared set is available from the authors on request.</p>
+      <div class="hero-cta">
+        <a class="btn" href="https://github.com/recepcanaltinbag/picota#installation">Full installation guide</a>
+        <a class="btn btn-ghost" href="https://doi.org/10.5281/zenodo.21769752">DOI 10.5281/zenodo.21769752</a>
+      </div>
+    </div>
+    <div class="code-stack">
+      <div class="code"><div class="code-h"><span>1 · environment</span><button class="copy">Copy</button></div><pre><code>git clone https://github.com/recepcanaltinbag/picota.git
+cd picota
+conda create -n picota -c bioconda -c conda-forge \
+    python=3.9 prodigal blast spades megahit fastp \
+    sra-tools parallel-fastq-dump minimap2 samtools \
+    biopython pandas pyyaml tqdm requests pysam matplotlib
+conda activate picota
+pip install -r requirements.txt</code></pre></div>
+      <div class="code"><div class="code-h"><span>2 · from a GFA</span><button class="copy">Copy</button></div><pre><code>python3 picota/picota.py analysis \
+    --gfa picota/test_data/testNitro.gfa --output picota_results/</code></pre></div>
+      <div class="code"><div class="code-h"><span>3 · from an SRA accession</span><button class="copy">Copy</button></div><pre><code>picota all --sra SRR11362851 --long SRR11362852 --output results/</code></pre></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div class="brand"><img src="assets/picota_icon.png" alt=""><span>PICOTA</span> <span class="muted">v1.1.0 · MIT</span></div>
+    <div class="footer-links">
+      <a href="https://github.com/recepcanaltinbag/picota">Source</a>
+      <a href="https://github.com/recepcanaltinbag/picota/issues">Issues</a>
+      <a href="https://doi.org/10.5281/zenodo.21769752">Zenodo</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="js/main.js"></script>
+<script src="js/benchmark.js"></script>
+</body>
+</html>
