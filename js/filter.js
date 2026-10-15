@@ -54,11 +54,11 @@
     let cell = Math.sqrt(((W - 2 * pad) * (H - 2 * pad)) / n);
     let cols = Math.max(1, Math.floor((W - 2 * pad) / cell));
     while (Math.ceil(n / cols) * cell > H - 2 * pad) { cell *= 0.96; cols = Math.max(1, Math.floor((W - 2 * pad) / cell)); }
-    cell = Math.min(cell, 64);
+    cell = Math.min(cell, 92);
     const rows = Math.ceil(n / cols);
     const ox = (W - Math.min(cols, n) * cell) / 2, oy = (H - rows * cell) / 2;
     const m = new Map();
-    alive.forEach((d, i) => m.set(d, { x: ox + (i % cols + 0.5) * cell, y: oy + (Math.floor(i / cols) + 0.5) * cell, r: Math.max(1.6, cell * 0.36) }));
+    alive.forEach((d, i) => m.set(d, { x: ox + (i % cols + 0.5) * cell, y: oy + (Math.floor(i / cols) + 0.5) * cell, r: Math.max(1.6, cell * 0.5) }));
     return m;
   }
   function layoutAll() { for (let s = 0; s <= STAGES.length; s++) pos[s] = layout(s); }
@@ -66,9 +66,43 @@
   let stage = 0, t = 1;   // t: progress of the move into `stage`
   function colours() {
     const cs = getComputedStyle(document.documentElement);
-    return { live: cs.getPropertyValue('--accent').trim(), gone: cs.getPropertyValue('--done').trim(), ok: cs.getPropertyValue('--good').trim() };
+    const v = n => cs.getPropertyValue(n).trim();
+    return { live: v('--accent'), gone: v('--done'), ok: v('--good'), is: v('--is'), ink: v('--ink') };
   }
-  function draw() {
+  // Each candidate is drawn as a small cycle: a ring with its IS node, sized by the cycle's
+  // length. The size filter's rejects are the rings that are too small or too large; the
+  // survivors close as IS + cargo, and a walker runs round the ones big enough to show it.
+  const sf = Array.from({ length: N }, (_, d) =>
+    fate[d] === 2 ? (rand() < 0.5 ? 0.42 : 1.12) : fate[d] === STAGES.length ? 0.92 : 0.62 + 0.3 * rand());
+  const phase0 = Array.from({ length: N }, () => rand() * 2 * Math.PI);
+
+  function glyph(d, x, y, r, c, state, now) {
+    const R = r * 0.74 * sf[d], lw = Math.max(1, r * 0.22);
+    if (R < 2.2) { ctx.fillStyle = state === 'gone' ? c.gone : c.live; ctx.beginPath(); ctx.arc(x, y, Math.max(1.2, R), 0, 2 * Math.PI); ctx.fill(); return; }
+    const top = -Math.PI / 2, isArc = 0.55;
+    ctx.lineWidth = lw; ctx.lineCap = 'butt';
+    if (state === 'gone') {
+      ctx.strokeStyle = c.gone; ctx.beginPath(); ctx.arc(x, y, R, 0, 2 * Math.PI); ctx.stroke(); return;
+    }
+    const resolved = state === 'final';
+    // cargo (or, before scoring decides, the rest of the cycle)
+    ctx.strokeStyle = resolved ? (complete.has(d) ? c.ok : c.live) : c.live;
+    ctx.beginPath(); ctx.arc(x, y, R, top + isArc / 2, top - isArc / 2 + 2 * Math.PI); ctx.stroke();
+    // the collapsed IS node the cycle runs through
+    ctx.strokeStyle = c.is; ctx.lineWidth = lw * 1.5;
+    ctx.beginPath(); ctx.arc(x, y, R, top - isArc / 2, top + isArc / 2); ctx.stroke();
+    if (R > 9) {   // a walker going round: the path leaves the IS and comes back into it
+      const a = phase0[d] + now / 900;
+      ctx.fillStyle = c.ink;
+      ctx.beginPath(); ctx.arc(x + R * Math.cos(a), y + R * Math.sin(a), Math.max(1.6, lw * 0.55), 0, 2 * Math.PI); ctx.fill();
+    }
+    if (resolved && complete.has(d) && R > 12) {
+      ctx.strokeStyle = c.ok; ctx.lineWidth = Math.max(2, lw * 0.6); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x - R * 0.32, y + R * 0.02); ctx.lineTo(x - R * 0.06, y + R * 0.28); ctx.lineTo(x + R * 0.36, y - R * 0.26); ctx.stroke();
+    }
+  }
+
+  function draw(now = performance.now()) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     const c = colours();
@@ -77,19 +111,13 @@
     for (let d = 0; d < N; d++) {
       const a = from.get(d), b = to.get(d);
       if (!a && !b) continue;
-      let x, y, r, col, alpha = 1;
-      if (b && a) { x = a.x + (b.x - a.x) * e; y = a.y + (b.y - a.y) * e; r = a.r + (b.r - a.r) * e; col = c.live; }
-      else if (b) { x = b.x; y = b.y; r = b.r; col = c.live; }
-      else { x = a.x; y = a.y + 14 * e; r = a.r * (1 - 0.5 * e); col = c.gone; alpha = 1 - e; }   // eliminated here
-      if (final && b) col = complete.has(d) ? c.ok : c.live;
-      if (stage === STAGES.length && !a) continue;
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
-      if (final && b && complete.has(d) && r > 9 && t > 0.6) {
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.2; ctx.beginPath();
-        ctx.moveTo(x - r * 0.38, y); ctx.lineTo(x - r * 0.08, y + r * 0.3); ctx.lineTo(x + r * 0.42, y - r * 0.32); ctx.stroke();
-      }
+      if (final && !a) continue;
+      let x, y, r, state = final ? 'final' : 'live';
+      ctx.globalAlpha = 1;
+      if (b && a) { x = a.x + (b.x - a.x) * e; y = a.y + (b.y - a.y) * e; r = a.r + (b.r - a.r) * e; }
+      else if (b) { x = b.x; y = b.y; r = b.r; }
+      else { x = a.x; y = a.y + 14 * e; r = a.r * (1 - 0.4 * e); state = 'gone'; ctx.globalAlpha = 1 - e; }   // eliminated here
+      glyph(d, x, y, r, c, state, now);
     }
     ctx.globalAlpha = 1;
   }
@@ -105,15 +133,19 @@
     bar.style.width = (100 * (stage + t) / (STAGES.length + 1)).toFixed(1) + '%';
   }
 
-  let raf = null, timer = null, playing = false, visible = true;
+  let raf = null, timer = null, playing = false, visible = true, tweening = false;
+  (function idle(now) {             // redraw between moves so the walkers keep going round
+    if (visible && !tweening && stage >= 3) draw(now);
+    requestAnimationFrame(idle);
+  })(performance.now());
   function goTo(s, dur, done) {
     cancelAnimationFrame(raf);
-    stage = s; t = 0; label();
+    stage = s; t = 0; label(); tweening = true;
     const t0 = performance.now();
     (function tick(now) {
       t = Math.min(1, (now - t0) / dur);
-      draw(); label();
-      if (t < 1) raf = requestAnimationFrame(tick); else if (done) done();
+      draw(now); label();
+      if (t < 1) raf = requestAnimationFrame(tick); else { tweening = false; if (done) done(); }
     })(t0);
   }
   function loop() {
@@ -127,7 +159,7 @@
     goTo(next, MOVE, () => { timer = setTimeout(loop, HOLD); });
   }
   function play() { if (playing) return; playing = true; playBtn.textContent = '❚❚ Pause'; timer = setTimeout(loop, 600); }
-  function stop() { playing = false; clearTimeout(timer); cancelAnimationFrame(raf); t = 1; draw(); label(); playBtn.textContent = '▶ Play'; }
+  function stop() { playing = false; clearTimeout(timer); cancelAnimationFrame(raf); tweening = false; t = 1; draw(); label(); playBtn.textContent = '▶ Play'; }
   playBtn.addEventListener('click', () => playing ? stop() : play());
   stepBtns.forEach(b => b.addEventListener('click', () => {
     stop(); goTo(+b.dataset.i, 700);
